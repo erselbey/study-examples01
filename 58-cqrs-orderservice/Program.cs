@@ -21,3 +21,5 @@ app.MapPost("/api/orders", async (IMediator mediator, CreateOrderCommand command
 app.MapGet("/api/orders", (IMediator mediator) => mediator.Send(new GetOrdersQuery()));
 
 app.Run();
+
+// dev degisiklik
