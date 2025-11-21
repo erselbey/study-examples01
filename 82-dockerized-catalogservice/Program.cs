@@ -15,4 +15,5 @@ app.MapGet("/api/catalog", () => Results.Ok(new[]
     new { Id = 2, Name = "Keyboard", Price = 49.99m }
 }));
 
-app.Run() // localhost:5000
+app.Run();
+// End of file
