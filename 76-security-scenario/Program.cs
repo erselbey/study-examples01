@@ -64,3 +64,6 @@ app.MapGet("/api/orders/my", [Authorize(Roles = "User")] (ClaimsPrincipal user) 
 app.Run();
 
 record Product(string Name, decimal Price);
+
+
+// 76-security-scenario test ediyorum
