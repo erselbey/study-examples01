@@ -24,3 +24,4 @@ public class CreateOrderCommandHandler : IRequestHandler<CreateOrderCommand, Gui
         return order.Id;
     }
 }
+//deneme 
