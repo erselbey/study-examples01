@@ -16,3 +16,4 @@ app.MapGet("/api/catalog", () => Results.Ok(new[]
 }));
 
 app.Run();
+// End of file
