@@ -7,4 +7,5 @@ public class OutboxMessage
     public string Payload { get; set; } = default!;
     public DateTime OccurredOn { get; set; }
     public DateTime? PublishedOn { get; set; }
+    /*deneme commit*/
 }
