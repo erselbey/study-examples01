@@ -1,13 +1,19 @@
-FROM mcr.microsoft.com/dotnet/sdk:8.0  
+FROM mcr.microsoft.com/dotnet/sdk:8.0 AS build
+WORKDIR /src
 
+# Restore bağımlılıkları
+COPY OrderService/OrderService.csproj OrderService/
+RUN dotnet restore OrderService/OrderService.csproj
 
+# Uygulama kodunu kopyala ve publish et
+COPY OrderService/. OrderService/
+WORKDIR /src/OrderService
+RUN dotnet publish -c Release -o /app/publish /p:UseAppHost=false
+
+FROM mcr.microsoft.com/dotnet/aspnet:8.0 AS final
 WORKDIR /app
-COPY . .
+COPY --from=build /app/publish .
 
-RUN dotnet new webapi -n OrderService
-
-RUN cd OrderService
-CMD ["dotnet", "run", "--project", "OrderService/OrderService.csproj", "--urls", "http://+:5002"]
-
-EXPOSE 5000
-#5000 portunu açtım O7
+ENV ASPNETCORE_URLS=http://+:5002
+EXPOSE 5002
+ENTRYPOINT ["dotnet", "OrderService.dll"]
