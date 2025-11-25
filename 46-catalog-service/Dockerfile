@@ -6,3 +6,5 @@ WORKDIR /app
 COPY . .
 
 #çalışma dizinini açtım bulundugum folderdan çalışma alanına kopyaladım
+RUN dotnet new webapş -n CatologService 
+#.NETLE KATOLG SERVİSİ OLUŞTURDUM
