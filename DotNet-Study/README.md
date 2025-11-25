@@ -32,7 +32,7 @@ DotNet-Study
 ## Program Genel Yapısı
 - **Süre:** 8 hafta (haftada ~6 saat aktif çalışma + ödev)
 - **Ön Koşullar:** Temel bilgisayar kullanımı ve algoritmik düşünmeye giriş seviyesi
-- **Araçlar:** .NET SDK 8+, Visual Studio Code, Git, Postman/Bruno, SQLite veya hafif bir veritabanı
+- **Araçlar:** .NET SDK 9+, Visual Studio Code, Git, Postman/Bruno, SQLite veya hafif bir veritabanı
 - **Kazanımlar:** C# dil temelleri, nesne yönelimli programlama, ASP.NET Core (Minimal API + MVC), Entity Framework Core, test & yayınlama
 
 ## Haftalık Modüller

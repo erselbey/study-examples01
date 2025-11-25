@@ -3,7 +3,7 @@
 Amaç: OrderService'in mesajı publish ettiği, NotificationService'in RabbitMQ üzerinden tüketip logladığı asenkron mimariyi göstermek.
 
 ## Teknolojiler
-- .NET 8 Web API (OrderService & NotificationService)
+- .NET 9 Web API (OrderService & NotificationService)
 - RabbitMQ + MassTransit
 - Docker (lokal RabbitMQ)
 

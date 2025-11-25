@@ -3,7 +3,7 @@
 Amaç: Command (yazma) ve Query (okuma) yollarını MediatR ile ayrıştırmak.
 
 ## Teknolojiler
-- .NET 8 Web API
+- .NET 9 Web API
 - EF Core (SQL Server/PostgreSQL)
 - MediatR
 

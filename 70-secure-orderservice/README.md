@@ -3,7 +3,7 @@
 Amaç: AuthService üzerinden alınan JWT token olmadan OrderService endpointlerine erişilememesi.
 
 ## Teknolojiler
-- .NET 8 Web API
+- .NET 9 Web API
 - JWT Bearer Authentication
 - Basit AuthService (hardcoded user veya Identity)
 

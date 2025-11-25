@@ -3,7 +3,7 @@
 Amaç: CQRS ile event-driven yaklaşımı birleştirip OrderService'in ürettiği eventleri Inventory ve Billing servislerinin tüketmesini sağlamak.
 
 ## Teknolojiler
-- .NET 8
+- .NET 9
 - RabbitMQ Event Bus (MassTransit veya custom bus)
 - MediatR (OrderService command tarafı)
 

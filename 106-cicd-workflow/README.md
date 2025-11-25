@@ -5,7 +5,7 @@ Amaç: GitHub Actions pipeline'ı ile .NET projesini build, test ve container im
 ## Teknolojiler
 - GitHub Actions
 - Docker Registry (Docker Hub veya GHCR)
-- .NET 8 SDK
+- .NET 9 SDK
 
 ## Workflow Dosyası
 `.github/workflows/cicd.yaml`
@@ -23,7 +23,7 @@ jobs:
       - name: Setup .NET
         uses: actions/setup-dotnet@v4
         with:
-          dotnet-version: 8.0.x
+          dotnet-version: 9.0.x
       - run: dotnet restore
       - run: dotnet build --configuration Release --no-restore
       - run: dotnet test --configuration Release --no-build

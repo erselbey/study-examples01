@@ -6,7 +6,7 @@ Bu doküman, `/Users/erselbey/Downloads/study-examples01` klasöründeki projele
 - **Dockerize etme adımları ve gerekli komut satırları**
 - **Servisin içinde/yakınında çalıştırılacak test komutları ve ileri düzey ödev önerileri**
 
-Projeler basitten karmaşığa doğru sıralandı. Tüm örnekler `.NET 8` tabanlıdır.
+Projeler basitten karmaşığa doğru sıralandı. Tüm örnekler `.NET 9` tabanlıdır.
 
 ## 0. Başlarken
 
@@ -29,11 +29,11 @@ Docker Desktop arayüzünü açık tut ve `docker --version`, `dotnet --info` ko
 Çoğu servis için aşağıdaki çok aşamalı Dockerfile şablonunu kullanabilirsiniz:
 
 ```dockerfile
-FROM mcr.microsoft.com/dotnet/aspnet:8.0 AS base
+FROM mcr.microsoft.com/dotnet/aspnet:9.0 AS base
 WORKDIR /app
 EXPOSE 8080
 
-FROM mcr.microsoft.com/dotnet/sdk:8.0 AS build
+FROM mcr.microsoft.com/dotnet/sdk:9.0 AS build
 WORKDIR /src
 COPY . .
 RUN dotnet publish -c Release -o /app/publish
@@ -62,11 +62,11 @@ dotnet publish -c Release -o out
 `46-catalog-service` klasörüne şu içeriğiyle bir `Dockerfile` ekleyin:
 
 ```dockerfile
-FROM mcr.microsoft.com/dotnet/aspnet:8.0 AS base
+FROM mcr.microsoft.com/dotnet/aspnet:9.0 AS base
 WORKDIR /app
 EXPOSE 8080
 
-FROM mcr.microsoft.com/dotnet/sdk:8.0 AS build
+FROM mcr.microsoft.com/dotnet/sdk:9.0 AS build
 WORKDIR /src
 COPY . .
 RUN dotnet publish -c Release -o /app/publish
@@ -106,11 +106,11 @@ docker run -d --name rabbitmq --network orders-net -p 5672:5672 -p 15672:15672 r
 Her servis için `Dockerfile` (aynı içerik, dosyayı ilgili klasörlere kopyala):
 
 ```dockerfile
-FROM mcr.microsoft.com/dotnet/aspnet:8.0 AS base
+FROM mcr.microsoft.com/dotnet/aspnet:9.0 AS base
 WORKDIR /app
 EXPOSE 8080
 
-FROM mcr.microsoft.com/dotnet/sdk:8.0 AS build
+FROM mcr.microsoft.com/dotnet/sdk:9.0 AS build
 WORKDIR /src
 COPY . .
 RUN dotnet publish -c Release -o /app/publish
@@ -160,11 +160,11 @@ dotnet test || true   # Test yoksa hata beklenmez
 Multi-stage Dockerfile:
 
 ```dockerfile
-FROM mcr.microsoft.com/dotnet/aspnet:8.0 AS base
+FROM mcr.microsoft.com/dotnet/aspnet:9.0 AS base
 WORKDIR /app
 EXPOSE 8080
 
-FROM mcr.microsoft.com/dotnet/sdk:8.0 AS build
+FROM mcr.microsoft.com/dotnet/sdk:9.0 AS build
 WORKDIR /src
 COPY . .
 RUN dotnet publish -c Release -o /app/publish
