@@ -10,3 +10,6 @@ RUN dotnet new webapi -n CatologService
 # dotnet ile KATOLG SERVİSİ OLUŞTURDUM
 RUN cd CatalogService
 CMD ["dotnet", "run", "--project", "CatologService/CatologService.csproj", "--urls", "http://+:5000"]
+
+EXPOSE 5000
+#5000 portunu açtım O7
