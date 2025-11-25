@@ -1,13 +1,12 @@
-FROM mcr.microsoft.com/dotnet/sdk:8.0  
+FROM mcr.microsoft.com/dotnet/sdk:8.0
 
-
-WORKDIR /app
-COPY . .
-
+WORKDIR /src
 RUN dotnet new webapi -n OrderService
 
-RUN cd OrderService
-CMD ["dotnet", "run", "--project", "OrderService/OrderService.csproj", "--urls", "http://+:5002"]
+WORKDIR /src/OrderService
+COPY . .
 
-EXPOSE 5000
-#5000 portunu açtım O7
+RUN dotnet restore
+RUN dotnet publish -c Release -o /app
+
+CMD ["dotnet", "/app/OrderService.dll", "--urls", "http://+:5002"]
