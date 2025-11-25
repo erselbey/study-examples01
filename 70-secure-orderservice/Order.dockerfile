@@ -1,12 +1,19 @@
-FROM mcr.microsoft.com/dotnet/sdk:8.0
-
+FROM mcr.microsoft.com/dotnet/sdk:8.0 AS build
 WORKDIR /src
-RUN dotnet new webapi -n OrderService
 
+# Restore bağımlılıkları
+COPY OrderService/OrderService.csproj OrderService/
+RUN dotnet restore OrderService/OrderService.csproj
+
+# Uygulama kodunu kopyala ve publish et
+COPY OrderService/. OrderService/
 WORKDIR /src/OrderService
-COPY . .
+RUN dotnet publish -c Release -o /app/publish /p:UseAppHost=false
 
-RUN dotnet restore
-RUN dotnet publish -c Release -o /app
+FROM mcr.microsoft.com/dotnet/aspnet:8.0 AS final
+WORKDIR /app
+COPY --from=build /app/publish .
 
-CMD ["dotnet", "/app/OrderService.dll", "--urls", "http://+:5002"]
+ENV ASPNETCORE_URLS=http://+:5002
+EXPOSE 5002
+ENTRYPOINT ["dotnet", "OrderService.dll"]
