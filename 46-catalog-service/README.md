@@ -61,4 +61,3 @@ sealed class InMemoryProductRepository : IProductRepository
 cd CatalogService
  dotnet run
 ```
-Swagger arayüzünden GET/POST endpointlerini test edebilirsin.

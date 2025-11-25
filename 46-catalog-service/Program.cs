@@ -48,7 +48,3 @@ sealed class InMemoryProductRepository : IProductRepository
         _items.Add(product with { Id = nextId });
     }
 }
-
-
-    //Command Line
-    //dev01 deneme
