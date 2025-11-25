@@ -1,6 +1,6 @@
 # Mikroservis Dockerizasyonu ve Uçtan Uca Ödev Dokümantasyonu
 
-Bu doküman, `/Users/erselbey/Downloads/study-examples01` klasöründeki projeleri sıfırdan kurup Docker konteynerlerinde çalıştırmak isteyen kişiler için hazırlandı. Her bölümde:
+Bu doküman, `/Users/Windows/Downloads/study-examples01` klasöründeki projeleri sıfırdan kurup Docker konteynerlerinde çalıştırmak isteyen kişiler için hazırlandı. Her bölümde:
 
 - **Amaç & teknoloji özeti**
 - **Dockerize etme adımları ve gerekli komut satırları**
@@ -19,7 +19,7 @@ brew install k3d
 brew install helm
 
 # Repo köküne gel
-cd /Users/erselbey/Downloads/study-examples01
+cd /Users/Windows/Downloads/study-examples01
 ```
 
 Docker Desktop arayüzünü açık tut ve `docker --version`, `dotnet --info` komutlarının çıktısını doğrula.
