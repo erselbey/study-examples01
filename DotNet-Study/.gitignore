@@ -2,5 +2,3 @@
 .DS_Store
 .github
 .vscode
-**/bin/
-**/obj/

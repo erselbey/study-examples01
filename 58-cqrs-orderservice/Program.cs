@@ -22,4 +22,3 @@ app.MapGet("/api/orders", (IMediator mediator) => mediator.Send(new GetOrdersQue
 
 app.Run();
 
-// dev degisiklik

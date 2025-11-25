@@ -3,7 +3,7 @@
 Amaç: Monolith'ten ayrılmış, tek başına çalışan minimal ürün kataloğu mikroservisini ayağa kaldırmak.
 
 ## Teknolojiler
-- .NET 8 + ASP.NET Core Minimal API
+- .NET 9 + ASP.NET Core Minimal API
 - Swagger/OpenAPI
 - In-memory repository (liste)
 
@@ -61,4 +61,3 @@ sealed class InMemoryProductRepository : IProductRepository
 cd CatalogService
  dotnet run
 ```
-Swagger arayüzünden GET/POST endpointlerini test edebilirsin.
