@@ -7,7 +7,7 @@ COPY . .
 RUN dotnet new webapi -n OrderService
 
 RUN cd OrderService
-CMD ["dotnet", "run", "--project", "OrderService/OrderService.csproj", "--urls", "http://+:5000"]
+CMD ["dotnet", "run", "--project", "OrderService/OrderService.csproj", "--urls", "http://+:5002"]
 
 EXPOSE 5000
 #5000 portunu açtım O7
