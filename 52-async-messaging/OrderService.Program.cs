@@ -1,3 +1,4 @@
+using Contracts;
 using MassTransit;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.Extensions.DependencyInjection;
@@ -30,5 +31,8 @@ app.MapPost("/api/orders", async (IPublishEndpoint bus, OrderRequest request) =>
 
 app.Run();
 
-record OrderRequest(string CustomerEmail, decimal Total);
-record OrderCreatedEvent(Guid OrderId, string CustomerEmail, decimal Total);
+namespace Contracts
+{
+    public record OrderRequest(string CustomerEmail, decimal Total);
+    public record OrderCreatedEvent(Guid OrderId, string CustomerEmail, decimal Total);
+}

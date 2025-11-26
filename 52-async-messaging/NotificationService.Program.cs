@@ -1,3 +1,4 @@
+using Contracts;
 using MassTransit;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.Extensions.DependencyInjection;
@@ -12,7 +13,7 @@ builder.Services.AddMassTransit(cfg =>
     cfg.AddConsumer<OrderCreatedConsumer>();
     cfg.UsingRabbitMq((context, bus) =>
     {
-        bus.Host("rabbitmq", "/", h =>
+        bus.Host("172-3-10-24.nip.io", "/", h =>
         {
             h.Username("guest");
             h.Password("guest");
@@ -42,4 +43,7 @@ class OrderCreatedConsumer : IConsumer<OrderCreatedEvent>
     }
 }
 
-record OrderCreatedEvent(Guid OrderId, string CustomerEmail, decimal Total);
+namespace Contracts
+{
+    public record OrderCreatedEvent(Guid OrderId, string CustomerEmail, decimal Total);
+}
