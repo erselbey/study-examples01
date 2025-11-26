@@ -14,8 +14,7 @@ services:
       interval: 10s
       timeout: 5s
       retries: 5
-      containers:
-        - name: rabbitmq  
+    container_name: rabbitmq
 
   order-service:
     build:
@@ -28,7 +27,7 @@ services:
       ASPNETCORE_URLS: http://+:8080
     ports:
       - "8081:8080"
-    container name: order-service
+    container_name: order-service
 
   notification-service:
     build:
@@ -41,4 +40,5 @@ services:
       ASPNETCORE_URLS: http://+:8080
     ports:
       - "8082:8080"
-    container name: notification-service
+    container_name: notification-service
+
