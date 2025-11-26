@@ -1,5 +1,6 @@
 using Contracts;
 using MassTransit;
+using MassTransit.KafkaIntegration;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
@@ -7,23 +8,46 @@ using System;
 using System.Threading.Tasks;
 
 var builder = WebApplication.CreateBuilder(args);
+var transport = builder.Configuration["TRANSPORT"]?.ToLowerInvariant() ?? "rabbitmq";
+var rabbitHost = builder.Configuration["RABBITMQ_HOST"] ?? "rabbitmq";
 
 builder.Services.AddMassTransit(cfg =>
 {
     cfg.AddConsumer<OrderCreatedConsumer>();
-    cfg.UsingRabbitMq((context, bus) =>
-    {
-        bus.Host("172-3-10-24.nip.io", "/", h =>
-        {
-            h.Username("guest");
-            h.Password("guest");
-        });
 
-        bus.ReceiveEndpoint("order-created-queue02", endpoint =>
+    if (transport == "kafka")
+    {
+        cfg.UsingInMemory((context, bus) => bus.ConfigureEndpoints(context));
+
+        cfg.AddRider(rider =>
         {
-            endpoint.ConfigureConsumer<OrderCreatedConsumer>(context);
+            rider.AddConsumer<OrderCreatedConsumer>();
+            rider.UsingKafka((context, k) =>
+            {
+                k.Host("kafka:9092");
+                k.TopicEndpoint<OrderCreatedEvent>("order-created", "notification-service", e =>
+                {
+                    e.ConfigureConsumer<OrderCreatedConsumer>(context);
+                });
+            });
         });
-    });
+    }
+    else
+    {
+        cfg.UsingRabbitMq((context, bus) =>
+        {
+            bus.Host(rabbitHost, "/", h =>
+            {
+                h.Username("guest");
+                h.Password("guest");
+            });
+
+            bus.ReceiveEndpoint("order-created-queue", endpoint =>
+            {
+                endpoint.ConfigureConsumer<OrderCreatedConsumer>(context);
+            });
+        });
+    }
 });
 
 var app = builder.Build();

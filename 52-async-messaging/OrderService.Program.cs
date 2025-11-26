@@ -1,31 +1,59 @@
 using Contracts;
 using MassTransit;
+using MassTransit.KafkaIntegration;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.Extensions.DependencyInjection;
 using System;
 using System.Threading.Tasks;
 
 var builder = WebApplication.CreateBuilder(args);
+var transport = builder.Configuration["TRANSPORT"]?.ToLowerInvariant() ?? "rabbitmq";
+var rabbitHost = builder.Configuration["RABBITMQ_HOST"] ?? "rabbitmq";
 
 builder.Services.AddMassTransit(cfg =>
 {
-    cfg.UsingRabbitMq((context, bus) =>
+    if (transport == "kafka")
     {
-        bus.Host("172-3-10-24.nip.io", "/", h =>
+        // In-memory bus keeps minimal pipeline; Kafka rider handles produce.
+        cfg.UsingInMemory((context, bus) => bus.ConfigureEndpoints(context));
+
+        cfg.AddRider(rider =>
         {
-            h.Username("guest");
-            h.Password("guest");
+            rider.AddProducer<OrderCreatedEvent>("order-created");
+            rider.UsingKafka((context, k) =>
+            {
+                k.Host("kafka:9092");
+            });
         });
-    });
+    }
+    else
+    {
+        cfg.UsingRabbitMq((context, bus) =>
+        {
+            bus.Host(rabbitHost, "/", h =>
+            {
+                h.Username("guest");
+                h.Password("guest");
+            });
+        });
+    }
 });
 
 var app = builder.Build();
 
-app.MapPost("/api/orders", async (IPublishEndpoint bus, OrderRequest request) =>
+app.MapPost("/api/orders", async (IPublishEndpoint bus, ITopicProducer<OrderCreatedEvent>? kafkaProducer, OrderRequest request) =>
 {
     await Task.Delay(300); // DB mock
     var evt = new OrderCreatedEvent(Guid.NewGuid(), request.CustomerEmail, request.Total);
-    await bus.Publish(evt);
+
+    if (kafkaProducer is not null)
+    {
+        await kafkaProducer.Produce(evt);
+    }
+    else
+    {
+        await bus.Publish(evt);
+    }
     return Results.Accepted($"/api/orders/{evt.OrderId}", evt);
 });
 
