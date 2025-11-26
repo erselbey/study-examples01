@@ -10,12 +10,14 @@ using System.Threading.Tasks;
 var builder = WebApplication.CreateBuilder(args);
 var transport = builder.Configuration["TRANSPORT"]?.ToLowerInvariant() ?? "rabbitmq";
 var rabbitHost = builder.Configuration["RABBITMQ_HOST"] ?? "rabbitmq";
+var kafkaHost = builder.Configuration["KAFKA_HOST"] ?? "kafka";
+var kafkaPort = builder.Configuration["KAFKA_PORT"] ?? "9092";
 
 builder.Services.AddMassTransit(cfg =>
 {
     cfg.AddConsumer<OrderCreatedConsumer>();
 
-    if (transport == "kafka")
+    if (transport == "$")
     {
         cfg.UsingInMemory((context, bus) => bus.ConfigureEndpoints(context));
 
@@ -24,7 +26,7 @@ builder.Services.AddMassTransit(cfg =>
             rider.AddConsumer<OrderCreatedConsumer>();
             rider.UsingKafka((context, k) =>
             {
-                k.Host("kafka:9092");
+                k.Host($"{kafkaHost}:{kafkaPort}");
                 k.TopicEndpoint<OrderCreatedEvent>("order-created", "notification-service", e =>
                 {
                     e.ConfigureConsumer<OrderCreatedConsumer>(context);
