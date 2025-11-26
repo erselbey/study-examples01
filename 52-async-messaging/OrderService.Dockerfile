@@ -5,7 +5,7 @@ COPY OrderService.csproj .
 RUN dotnet restore OrderService.csproj
 
 COPY OrderService.Program.cs .
-RUN dotnet publish OrderService.csproj -c Release -o /app/publish /p:UseAppHost=false
+RUN dotnet publish OrderService.csproj -c Release -o /app/publish /p:UseAppHost=false --no-restore
 
 FROM mcr.microsoft.com/dotnet/aspnet:9.0 AS final
 WORKDIR /app

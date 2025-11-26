@@ -5,7 +5,7 @@ COPY NotificationService.csproj .
 RUN dotnet restore NotificationService.csproj
 
 COPY NotificationService.Program.cs .
-RUN dotnet publish NotificationService.csproj -c Release -o /app/publish /p:UseAppHost=false
+RUN dotnet publish NotificationService.csproj -c Release -o /app/publish /p:UseAppHost=false --no-restore
 
 FROM mcr.microsoft.com/dotnet/aspnet:9.0 AS final
 WORKDIR /app
