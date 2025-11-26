@@ -19,7 +19,7 @@ builder.Services.AddMassTransit(cfg =>
             h.Password("guest");
         });
 
-        bus.ReceiveEndpoint("order-created-queue", endpoint =>
+        bus.ReceiveEndpoint("order-created-queue02", endpoint =>
         {
             endpoint.ConfigureConsumer<OrderCreatedConsumer>(context);
         });
