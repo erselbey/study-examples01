@@ -5,13 +5,20 @@ Amaç: OrderService'in mesajı publish ettiği, NotificationService'in RabbitMQ 
 ## Teknolojiler
 - .NET 9 Web API (OrderService & NotificationService)
 - RabbitMQ + MassTransit
-- Docker (lokal RabbitMQ)
+- Docker (lokal RabbitMQ) + docker-compose
 
-## RabbitMQ Kurulumu
+## Hızlı Çalıştırma (sadece Docker ile)
+`docker-compose.yml`, `OrderService.Dockerfile` ve `NotificationService.Dockerfile` hazır durumdadır. Lokal .NET kurulumu gerekmez.
+
 ```bash
-docker run -d --name rabbitmq -p 5672:5672 -p 15672:15672 rabbitmq:3-management
+cd 52-async-messaging
+docker compose up --build
 ```
-Management UI: http://localhost:15672 (guest/guest).
+
+Servis portları:
+- OrderService → `http://localhost:8081`
+- NotificationService → `http://localhost:8082`
+- RabbitMQ UI → `http://localhost:15672` (guest/guest)
 
 ## Mesaj Contract'ı
 `Contracts/OrderCreatedEvent.cs`
@@ -77,5 +84,12 @@ builder.Services.AddMassTransit(cfg =>
 ```
 
 ## Test
-1. OrderService'e `POST /api/orders` gönder.
-2. NotificationService log'larından mesajı doğrula.
+```bash
+curl -X POST http://localhost:8081/api/orders \
+     -H "Content-Type: application/json" \
+     -d '{"customerEmail":"kurs@example.com","total":25.5}'
+
+docker compose logs -f notification-service
+```
+
+OrderService `202 Accepted` döner; NotificationService loglarında mesaj işlendiğini görürsün.
