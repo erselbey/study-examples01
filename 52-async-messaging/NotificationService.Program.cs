@@ -27,7 +27,7 @@ builder.Services.AddMassTransit(cfg =>
             rider.UsingKafka((context, k) =>
             {
                 k.Host($"{kafkaHost}:{kafkaPort}");
-                k.TopicEndpoint<OrderCreatedEvent>("order-created", "notification-service", e =>
+                k.TopicEndpoint<OrderCreatedEvent>("order-created-01", "notification-service", e =>
                 {
                     e.ConfigureConsumer<OrderCreatedConsumer>(context);
                 });
@@ -44,7 +44,7 @@ builder.Services.AddMassTransit(cfg =>
                 h.Password("guest");
             });
 
-            bus.ReceiveEndpoint("order-created-queue", endpoint =>
+            bus.ReceiveEndpoint("order-created-queue-01", endpoint =>
             {
                 endpoint.ConfigureConsumer<OrderCreatedConsumer>(context);
             });
