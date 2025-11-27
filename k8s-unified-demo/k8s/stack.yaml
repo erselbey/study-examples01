@@ -1,234 +1,59 @@
-# --- mesh-demo: uygulama + veritabani katmani ---
+# catalog-demo: yalnizca catalog-service yayinlayan yalın manifest
 apiVersion: v1
 kind: Namespace
 metadata:
-  name: mesh-demo
+  name: catalog-demo
   labels:
-    app.kubernetes.io/name: mesh-demo
+    app.kubernetes.io/name: catalog-demo
 ---
 apiVersion: v1
 kind: ConfigMap
 metadata:
-  name: mesh-demo-config
-  namespace: mesh-demo
+  name: catalog-config
+  namespace: demo
 data:
   ENVIRONMENT: "production"
-  WORKER_URL: "http://worker.mesh-demo.svc.cluster.local:8081"
-  SERVICE_NAME_API: "api"
-  SERVICE_NAME_WORKER: "worker"
-  SERVICE_NAME_CATALOG: "catalog"
-  DATABASE_NAME: "mesh_demo"
-  DATABASE_USER: "mesh_user"
----
-apiVersion: v1
-kind: Secret
-metadata:
-  name: mesh-demo-secrets
-  namespace: mesh-demo
-type: Opaque
-stringData:
-  DATABASE_PASSWORD: "mesh_password"
-  API_TOKEN: "change-me"
+  SERVICE_NAME: "catalog"
 ---
 apiVersion: v1
 kind: ServiceAccount
 metadata:
-  name: mesh-demo-sa
-  namespace: mesh-demo
----
-apiVersion: rbac.authorization.k8s.io/v1
-kind: Role
-metadata:
-  name: mesh-demo-config-reader
-  namespace: mesh-demo
-rules:
-  - apiGroups: [""]
-    resources: ["configmaps", "secrets"]
-    verbs: ["get", "list", "watch"]
----
-apiVersion: rbac.authorization.k8s.io/v1
-kind: RoleBinding
-metadata:
-  name: mesh-demo-config-reader-binding
-  namespace: mesh-demo
-subjects:
-  - kind: ServiceAccount
-    name: mesh-demo-sa
-    namespace: mesh-demo
-roleRef:
-  kind: Role
-  name: mesh-demo-config-reader
-  apiGroup: rbac.authorization.k8s.io
+  name: catalog-sa
+  namespace: demo
 ---
 apiVersion: networking.k8s.io/v1
 kind: NetworkPolicy
 metadata:
-  name: mesh-demo-allow-namespace
-  namespace: mesh-demo
+  name: catalog-allow-namespace
+  namespace: demo
 spec:
   podSelector:
     matchLabels:
-      app.kubernetes.io/part-of: mesh-demo
+      app.kubernetes.io/name: catalog
   ingress:
     - from:
         - podSelector:
             matchLabels:
-              app.kubernetes.io/part-of: mesh-demo
+              app.kubernetes.io/name: catalog
         - namespaceSelector:
             matchLabels:
-              app.kubernetes.io/name: mesh-demo
+              app.kubernetes.io/name: catalog-demo
   egress:
-    - to:
-        - podSelector:
-            matchLabels:
-              app.kubernetes.io/part-of: mesh-demo
-        - namespaceSelector:
-            matchLabels:
-              kubernetes.io/metadata.name: kube-system
-      ports:
-        - protocol: UDP
-          port: 53
     - {}
   policyTypes: ["Ingress", "Egress"]
----
-apiVersion: v1
-kind: PersistentVolumeClaim
-metadata:
-  name: worker-shared-cache
-  namespace: mesh-demo
-  labels:
-    app.kubernetes.io/part-of: mesh-demo
-spec:
-  accessModes: ["ReadWriteOnce"]
-  resources:
-    requests:
-      storage: 1Gi
----
-apiVersion: v1
-kind: Service
-metadata:
-  name: postgres
-  namespace: mesh-demo
-  labels:
-    app.kubernetes.io/name: postgres
-    app.kubernetes.io/part-of: mesh-demo
-spec:
-  ports:
-    - port: 5432
-      name: postgres
-  selector:
-    app.kubernetes.io/name: postgres
-    app.kubernetes.io/part-of: mesh-demo
----
-apiVersion: apps/v1
-kind: StatefulSet
-metadata:
-  name: postgres
-  namespace: mesh-demo
-  labels:
-    app.kubernetes.io/name: postgres
-    app.kubernetes.io/part-of: mesh-demo
-spec:
-  serviceName: postgres
-  replicas: 1
-  selector:
-    matchLabels:
-      app.kubernetes.io/name: postgres
-      app.kubernetes.io/part-of: mesh-demo
-  template:
-    metadata:
-      labels:
-        app.kubernetes.io/name: postgres
-        app.kubernetes.io/part-of: mesh-demo
-    spec:
-      serviceAccountName: mesh-demo-sa
-      containers:
-        - name: postgres
-          image: postgres:16-alpine
-          imagePullPolicy: IfNotPresent
-          ports:
-            - containerPort: 5432
-              name: postgres
-          env:
-            - name: POSTGRES_DB
-              valueFrom:
-                configMapKeyRef:
-                  name: mesh-demo-config
-                  key: DATABASE_NAME
-            - name: POSTGRES_USER
-              valueFrom:
-                configMapKeyRef:
-                  name: mesh-demo-config
-                  key: DATABASE_USER
-            - name: POSTGRES_PASSWORD
-              valueFrom:
-                secretKeyRef:
-                  name: mesh-demo-secrets
-                  key: DATABASE_PASSWORD
-          volumeMounts:
-            - name: postgres-data
-              mountPath: /var/lib/postgresql/data
-              subPath: data
-      terminationGracePeriodSeconds: 30
-  volumeClaimTemplates:
-    - metadata:
-        name: postgres-data
-        labels:
-          app.kubernetes.io/part-of: mesh-demo
-      spec:
-        accessModes: ["ReadWriteOnce"]
-        resources:
-          requests:
-            storage: 5Gi
----
-apiVersion: v1
-kind: Service
-metadata:
-  name: api
-  namespace: mesh-demo
-  labels:
-    app.kubernetes.io/name: api
-    app.kubernetes.io/part-of: mesh-demo
-spec:
-  selector:
-    app.kubernetes.io/name: api
-    app.kubernetes.io/part-of: mesh-demo
-  ports:
-    - name: http
-      port: 80
-      targetPort: 8080
-  type: ClusterIP
----
-apiVersion: v1
-kind: Service
-metadata:
-  name: worker
-  namespace: mesh-demo
-  labels:
-    app.kubernetes.io/name: worker
-    app.kubernetes.io/part-of: mesh-demo
-spec:
-  selector:
-    app.kubernetes.io/name: worker
-    app.kubernetes.io/part-of: mesh-demo
-  ports:
-    - name: http
-      port: 8081
-      targetPort: 8081
-  type: ClusterIP
 ---
 apiVersion: v1
 kind: Service
 metadata:
   name: catalog
-  namespace: mesh-demo
+  namespace: demo
   labels:
     app.kubernetes.io/name: catalog
-    app.kubernetes.io/part-of: mesh-demo
+    app.kubernetes.io/part-of: catalog-demo
 spec:
   selector:
     app.kubernetes.io/name: catalog
-    app.kubernetes.io/part-of: mesh-demo
+    app.kubernetes.io/part-of: catalog-demo
   ports:
     - name: http
       port: 8083
@@ -238,97 +63,17 @@ spec:
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: api
-  namespace: mesh-demo
-  labels:
-    app.kubernetes.io/name: api
-    app.kubernetes.io/part-of: mesh-demo
-spec:
-  replicas: 2
-  selector:
-    matchLabels:
-      app.kubernetes.io/name: api
-      app.kubernetes.io/part-of: mesh-demo
-  strategy:
-    type: RollingUpdate
-    rollingUpdate:
-      maxSurge: 1
-      maxUnavailable: 0
-  template:
-    metadata:
-      labels:
-        app.kubernetes.io/name: api
-        app.kubernetes.io/part-of: mesh-demo
-    spec:
-      serviceAccountName: mesh-demo-sa
-      containers:
-        - name: api
-          image: ghcr.io/OWNER/mesh-api:latest
-          imagePullPolicy: IfNotPresent
-          ports:
-            - containerPort: 8080
-          env:
-            - name: ENVIRONMENT
-              valueFrom:
-                configMapKeyRef:
-                  name: mesh-demo-config
-                  key: ENVIRONMENT
-            - name: SERVICE_NAME
-              valueFrom:
-                configMapKeyRef:
-                  name: mesh-demo-config
-                  key: SERVICE_NAME_API
-            - name: WORKER_URL
-              valueFrom:
-                configMapKeyRef:
-                  name: mesh-demo-config
-                  key: WORKER_URL
-            - name: DATABASE_HOST
-              value: postgres.mesh-demo.svc.cluster.local
-            - name: DATABASE_USER
-              valueFrom:
-                configMapKeyRef:
-                  name: mesh-demo-config
-                  key: DATABASE_USER
-            - name: DATABASE_PASSWORD
-              valueFrom:
-                secretKeyRef:
-                  name: mesh-demo-secrets
-                  key: DATABASE_PASSWORD
-          resources:
-            requests:
-              cpu: 100m
-              memory: 128Mi
-            limits:
-              cpu: 500m
-              memory: 256Mi
-          readinessProbe:
-            httpGet:
-              path: /health
-              port: 8080
-            initialDelaySeconds: 5
-            periodSeconds: 5
-          livenessProbe:
-            httpGet:
-              path: /health
-              port: 8080
-            initialDelaySeconds: 10
-            periodSeconds: 10
----
-apiVersion: apps/v1
-kind: Deployment
-metadata:
   name: catalog
-  namespace: mesh-demo
+  namespace: demo
   labels:
     app.kubernetes.io/name: catalog
-    app.kubernetes.io/part-of: mesh-demo
+    app.kubernetes.io/part-of: catalog-demo
 spec:
   replicas: 1
   selector:
     matchLabels:
       app.kubernetes.io/name: catalog
-      app.kubernetes.io/part-of: mesh-demo
+      app.kubernetes.io/part-of: catalog-demo
   strategy:
     type: RollingUpdate
     rollingUpdate:
@@ -338,12 +83,12 @@ spec:
     metadata:
       labels:
         app.kubernetes.io/name: catalog
-        app.kubernetes.io/part-of: mesh-demo
+        app.kubernetes.io/part-of: catalog-demo
     spec:
-      serviceAccountName: mesh-demo-sa
+      serviceAccountName: catalog-sa
       containers:
         - name: catalog
-          image: ghcr.io/OWNER/catalog-service:latest
+          image: docker.io/erselbey/catalog-service:latest
           imagePullPolicy: IfNotPresent
           ports:
             - containerPort: 8083
@@ -351,13 +96,13 @@ spec:
             - name: ENVIRONMENT
               valueFrom:
                 configMapKeyRef:
-                  name: mesh-demo-config
+                  name: catalog-config
                   key: ENVIRONMENT
             - name: SERVICE_NAME
               valueFrom:
                 configMapKeyRef:
-                  name: mesh-demo-config
-                  key: SERVICE_NAME_CATALOG
+                  name: catalog-config
+                  key: SERVICE_NAME
           resources:
             requests:
               cpu: 50m
@@ -372,600 +117,22 @@ spec:
             initialDelaySeconds: 5
             periodSeconds: 5
 ---
-# --- messaging-demo: Kafka + RabbitMQ + messaging gateway ---
-apiVersion: v1
-kind: Namespace
-metadata:
-  name: messaging-demo
-  labels:
-    app.kubernetes.io/name: messaging-demo
----
-apiVersion: v1
-kind: ConfigMap
-metadata:
-  name: messaging-config
-  namespace: messaging-demo
-data:
-  ENVIRONMENT: "production"
-  SERVICE_NAME_GATEWAY: "messaging-gateway"
-  KAFKA_BROKER: "kafka.messaging-demo.svc.cluster.local:9092"
-  RABBITMQ_HOST: "rabbitmq.messaging-demo.svc.cluster.local"
-  RABBITMQ_USER: "mesh_mq"
----
-apiVersion: v1
-kind: Secret
-metadata:
-  name: messaging-secrets
-  namespace: messaging-demo
-type: Opaque
-stringData:
-  RABBITMQ_PASSWORD: "mesh_mq_password"
----
-apiVersion: v1
-kind: ServiceAccount
-metadata:
-  name: messaging-sa
-  namespace: messaging-demo
----
-apiVersion: rbac.authorization.k8s.io/v1
-kind: Role
-metadata:
-  name: messaging-config-reader
-  namespace: messaging-demo
-rules:
-  - apiGroups: [""]
-    resources: ["configmaps", "secrets"]
-    verbs: ["get", "list", "watch"]
----
-apiVersion: rbac.authorization.k8s.io/v1
-kind: RoleBinding
-metadata:
-  name: messaging-config-reader-binding
-  namespace: messaging-demo
-subjects:
-  - kind: ServiceAccount
-    name: messaging-sa
-    namespace: messaging-demo
-roleRef:
-  kind: Role
-  name: messaging-config-reader
-  apiGroup: rbac.authorization.k8s.io
----
 apiVersion: networking.k8s.io/v1
-kind: NetworkPolicy
+kind: Ingress
 metadata:
-  name: messaging-allow-namespace
-  namespace: messaging-demo
-spec:
-  podSelector:
-    matchLabels:
-      app.kubernetes.io/part-of: messaging-demo
-  ingress:
-    - from:
-        - podSelector:
-            matchLabels:
-              app.kubernetes.io/part-of: messaging-demo
-        - namespaceSelector:
-            matchLabels:
-              app.kubernetes.io/name: messaging-demo
-  egress:
-    - {}
-  policyTypes: ["Ingress", "Egress"]
----
-apiVersion: v1
-kind: Service
-metadata:
-  name: zookeeper
-  namespace: messaging-demo
-  labels:
-    app.kubernetes.io/name: zookeeper
-    app.kubernetes.io/part-of: messaging-demo
-spec:
-  ports:
-    - port: 2181
-      name: client
-  selector:
-    app.kubernetes.io/name: zookeeper
-    app.kubernetes.io/part-of: messaging-demo
----
-apiVersion: apps/v1
-kind: StatefulSet
-metadata:
-  name: zookeeper
-  namespace: messaging-demo
-  labels:
-    app.kubernetes.io/name: zookeeper
-    app.kubernetes.io/part-of: messaging-demo
-spec:
-  serviceName: zookeeper
-  replicas: 1
-  selector:
-    matchLabels:
-      app.kubernetes.io/name: zookeeper
-      app.kubernetes.io/part-of: messaging-demo
-  template:
-    metadata:
-      labels:
-        app.kubernetes.io/name: zookeeper
-        app.kubernetes.io/part-of: messaging-demo
-    spec:
-      serviceAccountName: messaging-sa
-      containers:
-        - name: zookeeper
-          image: bitnami/zookeeper:3.9.2
-          imagePullPolicy: IfNotPresent
-          ports:
-            - containerPort: 2181
-              name: client
-          env:
-            - name: ALLOW_ANONYMOUS_LOGIN
-              value: "yes"
-          volumeMounts:
-            - name: zookeeper-data
-              mountPath: /bitnami/zookeeper
-  volumeClaimTemplates:
-    - metadata:
-        name: zookeeper-data
-        labels:
-          app.kubernetes.io/part-of: messaging-demo
-      spec:
-        accessModes: ["ReadWriteOnce"]
-        resources:
-          requests:
-            storage: 2Gi
----
-apiVersion: v1
-kind: Service
-metadata:
-  name: kafka
-  namespace: messaging-demo
-  labels:
-    app.kubernetes.io/name: kafka
-    app.kubernetes.io/part-of: messaging-demo
-spec:
-  ports:
-    - port: 9092
-      name: kafka
-  selector:
-    app.kubernetes.io/name: kafka
-    app.kubernetes.io/part-of: messaging-demo
----
-apiVersion: apps/v1
-kind: StatefulSet
-metadata:
-  name: kafka
-  namespace: messaging-demo
-  labels:
-    app.kubernetes.io/name: kafka
-    app.kubernetes.io/part-of: messaging-demo
-spec:
-  serviceName: kafka
-  replicas: 1
-  selector:
-    matchLabels:
-      app.kubernetes.io/name: kafka
-      app.kubernetes.io/part-of: messaging-demo
-  template:
-    metadata:
-      labels:
-        app.kubernetes.io/name: kafka
-        app.kubernetes.io/part-of: messaging-demo
-    spec:
-      serviceAccountName: messaging-sa
-      containers:
-        - name: kafka
-          image: bitnami/kafka:3.6.1
-          imagePullPolicy: IfNotPresent
-          ports:
-            - containerPort: 9092
-              name: kafka
-          env:
-            - name: KAFKA_CFG_ZOOKEEPER_CONNECT
-              value: zookeeper.messaging-demo.svc.cluster.local:2181
-            - name: KAFKA_CFG_LISTENERS
-              value: PLAINTEXT://:9092
-            - name: KAFKA_CFG_ADVERTISED_LISTENERS
-              value: PLAINTEXT://kafka.messaging-demo.svc.cluster.local:9092
-            - name: KAFKA_CFG_BROKER_ID
-              value: "1"
-            - name: KAFKA_CFG_OFFSETS_TOPIC_REPLICATION_FACTOR
-              value: "1"
-            - name: KAFKA_CFG_TRANSACTION_STATE_LOG_REPLICATION_FACTOR
-              value: "1"
-            - name: KAFKA_CFG_TRANSACTION_STATE_LOG_MIN_ISR
-              value: "1"
-            - name: KAFKA_CFG_NUM_PARTITIONS
-              value: "3"
-            - name: ALLOW_PLAINTEXT_LISTENER
-              value: "yes"
-          volumeMounts:
-            - name: kafka-data
-              mountPath: /bitnami/kafka
-  volumeClaimTemplates:
-    - metadata:
-        name: kafka-data
-        labels:
-          app.kubernetes.io/part-of: messaging-demo
-      spec:
-        accessModes: ["ReadWriteOnce"]
-        resources:
-          requests:
-            storage: 5Gi
----
-apiVersion: v1
-kind: Service
-metadata:
-  name: rabbitmq
-  namespace: messaging-demo
-  labels:
-    app.kubernetes.io/name: rabbitmq
-    app.kubernetes.io/part-of: messaging-demo
-spec:
-  ports:
-    - port: 5672
-      name: amqp
-    - port: 15672
-      name: management
-  selector:
-    app.kubernetes.io/name: rabbitmq
-    app.kubernetes.io/part-of: messaging-demo
----
-apiVersion: apps/v1
-kind: StatefulSet
-metadata:
-  name: rabbitmq
-  namespace: messaging-demo
-  labels:
-    app.kubernetes.io/name: rabbitmq
-    app.kubernetes.io/part-of: messaging-demo
-spec:
-  serviceName: rabbitmq
-  replicas: 1
-  selector:
-    matchLabels:
-      app.kubernetes.io/name: rabbitmq
-      app.kubernetes.io/part-of: messaging-demo
-  template:
-    metadata:
-      labels:
-        app.kubernetes.io/name: rabbitmq
-        app.kubernetes.io/part-of: messaging-demo
-    spec:
-      serviceAccountName: messaging-sa
-      containers:
-        - name: rabbitmq
-          image: bitnami/rabbitmq:3.13.3
-          imagePullPolicy: IfNotPresent
-          ports:
-            - containerPort: 5672
-              name: amqp
-            - containerPort: 15672
-              name: management
-          env:
-            - name: RABBITMQ_USERNAME
-              valueFrom:
-                configMapKeyRef:
-                  name: messaging-config
-                  key: RABBITMQ_USER
-            - name: RABBITMQ_PASSWORD
-              valueFrom:
-                secretKeyRef:
-                  name: messaging-secrets
-                  key: RABBITMQ_PASSWORD
-            - name: RABBITMQ_PLUGINS
-              value: "rabbitmq_management"
-          volumeMounts:
-            - name: rabbitmq-data
-              mountPath: /bitnami/rabbitmq
-  volumeClaimTemplates:
-    - metadata:
-        name: rabbitmq-data
-        labels:
-          app.kubernetes.io/part-of: messaging-demo
-      spec:
-        accessModes: ["ReadWriteOnce"]
-        resources:
-          requests:
-            storage: 5Gi
----
-apiVersion: v1
-kind: Service
-metadata:
-  name: messaging-gateway
-  namespace: messaging-demo
-  labels:
-    app.kubernetes.io/name: messaging-gateway
-    app.kubernetes.io/part-of: messaging-demo
-spec:
-  ports:
-    - name: http
-      port: 8082
-      targetPort: 8082
-  selector:
-    app.kubernetes.io/name: messaging-gateway
-    app.kubernetes.io/part-of: messaging-demo
----
-apiVersion: apps/v1
-kind: Deployment
-metadata:
-  name: messaging-gateway
-  namespace: messaging-demo
-  labels:
-    app.kubernetes.io/name: messaging-gateway
-    app.kubernetes.io/part-of: messaging-demo
-spec:
-  replicas: 1
-  selector:
-    matchLabels:
-      app.kubernetes.io/name: messaging-gateway
-      app.kubernetes.io/part-of: messaging-demo
-  template:
-    metadata:
-      labels:
-        app.kubernetes.io/name: messaging-gateway
-        app.kubernetes.io/part-of: messaging-demo
-    spec:
-      serviceAccountName: messaging-sa
-      containers:
-        - name: messaging-gateway
-          image: ghcr.io/OWNER/messaging-gateway:latest
-          imagePullPolicy: IfNotPresent
-          ports:
-            - containerPort: 8082
-          env:
-            - name: ENVIRONMENT
-              valueFrom:
-                configMapKeyRef:
-                  name: messaging-config
-                  key: ENVIRONMENT
-            - name: SERVICE_NAME
-              valueFrom:
-                configMapKeyRef:
-                  name: messaging-config
-                  key: SERVICE_NAME_GATEWAY
-            - name: KAFKA_BROKER
-              valueFrom:
-                configMapKeyRef:
-                  name: messaging-config
-                  key: KAFKA_BROKER
-            - name: RABBITMQ_HOST
-              valueFrom:
-                configMapKeyRef:
-                  name: messaging-config
-                  key: RABBITMQ_HOST
-            - name: RABBITMQ_USER
-              valueFrom:
-                configMapKeyRef:
-                  name: messaging-config
-                  key: RABBITMQ_USER
-            - name: RABBITMQ_PASSWORD
-              valueFrom:
-                secretKeyRef:
-                  name: messaging-secrets
-                  key: RABBITMQ_PASSWORD
-          resources:
-            requests:
-              cpu: 100m
-              memory: 128Mi
-            limits:
-              cpu: 300m
-              memory: 256Mi
-          readinessProbe:
-            httpGet:
-              path: /health
-              port: 8082
-            initialDelaySeconds: 5
-            periodSeconds: 5
----
-apiVersion: apps/v1
-kind: Deployment
-metadata:
-  name: worker
-  namespace: mesh-demo
-  labels:
-    app.kubernetes.io/name: worker
-    app.kubernetes.io/part-of: mesh-demo
-spec:
-  replicas: 1
-  selector:
-    matchLabels:
-      app.kubernetes.io/name: worker
-      app.kubernetes.io/part-of: mesh-demo
-  template:
-    metadata:
-      labels:
-        app.kubernetes.io/name: worker
-        app.kubernetes.io/part-of: mesh-demo
-    spec:
-      serviceAccountName: mesh-demo-sa
-      volumes:
-        - name: shared-cache
-          persistentVolumeClaim:
-            claimName: worker-shared-cache
-      containers:
-        - name: worker
-          image: ghcr.io/OWNER/mesh-worker:latest
-          imagePullPolicy: IfNotPresent
-          ports:
-            - containerPort: 8081
-          env:
-            - name: ENVIRONMENT
-              valueFrom:
-                configMapKeyRef:
-                  name: mesh-demo-config
-                  key: ENVIRONMENT
-            - name: SERVICE_NAME
-              valueFrom:
-                configMapKeyRef:
-                  name: mesh-demo-config
-                  key: SERVICE_NAME_WORKER
-            - name: API_TOKEN
-              valueFrom:
-                secretKeyRef:
-                  name: mesh-demo-secrets
-                  key: API_TOKEN
-          resources:
-            requests:
-              cpu: 50m
-              memory: 64Mi
-            limits:
-              cpu: 250m
-              memory: 256Mi
-          volumeMounts:
-            - name: shared-cache
-              mountPath: /var/shared-cache
-          readinessProbe:
-            httpGet:
-              path: /health
-              port: 8081
-            initialDelaySeconds: 5
-            periodSeconds: 5
----
-apiVersion: autoscaling/v2
-kind: HorizontalPodAutoscaler
-metadata:
-  name: api-hpa
-  namespace: mesh-demo
-spec:
-  scaleTargetRef:
-    apiVersion: apps/v1
-    kind: Deployment
-    name: api
-  minReplicas: 2
-  maxReplicas: 5
-  metrics:
-    - type: Resource
-      resource:
-        name: cpu
-        target:
-          type: Utilization
-          averageUtilization: 60
----
-apiVersion: gateway.networking.k8s.io/v1
-kind: Gateway
-metadata:
-  name: mesh-demo-gw
-  namespace: mesh-demo
+  name: catalog-ingress
+  namespace: demo
   annotations:
-    # Controller'a (örn. nginx-gateway, istio, traefik) hangi GatewayClass ile calisacagini soyler.
-    # Kullandiginiz controller'in destekledigi bir GatewayClass adi ile eslestirmelisiniz.
+    kubernetes.io/ingress.class: nginx
 spec:
-  gatewayClassName: nginx
-  listeners:
-    - name: http
-      protocol: HTTP
-      port: 80
-      hostname: mesh-demo.local
-      allowedRoutes:
-        namespaces:
-          from: Same
----
-apiVersion: gateway.networking.k8s.io/v1
-kind: HTTPRoute
-metadata:
-  name: api
-  namespace: mesh-demo
-  annotations:
-    # Bu route sadece mesh-demo namespace'inden gelenleri kabul eder.
-    networking.k8s.io/description: "API'yi Gateway uzerinden yayinlar"
-spec:
-  parentRefs:
-    - name: mesh-demo-gw
-  hostnames:
-    - mesh-demo.local
   rules:
-    - matches:
-        - path:
-            type: PathPrefix
-            value: /
-      backendRefs:
-        - name: api
-          port: 80
-    - matches:
-        - path:
-            type: PathPrefix
-            value: /catalog
-      backendRefs:
-        - name: catalog
-          port: 8083
----
-apiVersion: batch/v1
-kind: CronJob
-metadata:
-  name: nightly-cleanup
-  namespace: mesh-demo
-spec:
-  schedule: "30 2 * * *"
-  jobTemplate:
-    spec:
-      template:
-        metadata:
-          labels:
-            app.kubernetes.io/name: nightly-cleanup
-            app.kubernetes.io/part-of: mesh-demo
-        spec:
-          serviceAccountName: mesh-demo-sa
-          restartPolicy: OnFailure
-          containers:
-            - name: curl-worker
-              image: curlimages/curl:8.8.0
-              args:
-                - "-X"
-                - "POST"
-                - "http://worker.mesh-demo.svc.cluster.local:8081/tasks"
-                - "-H"
-                - "Content-Type: application/json"
-                - "-d"
-                - '{"job":"cleanup","note":"nightly cron"}'
----
-apiVersion: batch/v1
-kind: Job
-metadata:
-  name: db-seed
-  namespace: mesh-demo
-spec:
-  backoffLimit: 2
-  template:
-    metadata:
-      labels:
-        app.kubernetes.io/name: db-seed
-        app.kubernetes.io/part-of: mesh-demo
-    spec:
-      serviceAccountName: mesh-demo-sa
-      restartPolicy: OnFailure
-      containers:
-        - name: seed
-          image: postgres:16-alpine
-          env:
-            - name: PGPASSWORD
-              valueFrom:
-                secretKeyRef:
-                  name: mesh-demo-secrets
-                  key: DATABASE_PASSWORD
-            - name: PGUSER
-              valueFrom:
-                configMapKeyRef:
-                  name: mesh-demo-config
-                  key: DATABASE_USER
-            - name: PGDATABASE
-              valueFrom:
-                configMapKeyRef:
-                  name: mesh-demo-config
-                  key: DATABASE_NAME
-          command:
-            - sh
-            - -c
-            - |
-              psql -h postgres.mesh-demo.svc.cluster.local -U "$PGUSER" -d "$PGDATABASE" -c "SELECT NOW();"
----
-apiVersion: policy/v1
-kind: PodDisruptionBudget
-metadata:
-  name: api-pdb
-  namespace: mesh-demo
-spec:
-  minAvailable: 1
-  selector:
-    matchLabels:
-      app.kubernetes.io/name: api
-      app.kubernetes.io/part-of: mesh-demo
+    - host: catalog-demo.local
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: catalog
+                port:
+                  number: 8083
