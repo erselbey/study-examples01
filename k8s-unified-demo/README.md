@@ -4,6 +4,7 @@ Bu klasor, DotNet-Study orneklerindeki minimal API yaklasimini referans alarak i
 
 ## Klasor yapisi
 - `apps/api`: Minimal .NET API (product katalogu + worker'a cagri), Dockerfile ve csproj.
+- `apps/catalog`: 46-catalog-service orneginden alinmis .NET 8 katalog servisi, Dockerfile ve csproj.
 - `apps/worker`: Minimal .NET worker API (task kabul eden servis), Dockerfile ve csproj.
 - `apps/messaging-gateway`: Kafka ve RabbitMQ'ya mesaj atan minimal .NET 8 API, Dockerfile ve csproj (Confluent.Kafka + RabbitMQ.Client).
 - `k8s/stack.yaml`: Tum Kubernetes objelerini (Namespace, ConfigMap, Secret, Deployment, StatefulSet, Service, Gateway + HTTPRoute, HPA, NetworkPolicy, CronJob, Job, PDB, PVC, ServiceAccount, Role/RoleBinding) iceren tek dosya. Ayrica `messaging-demo` namespace'i altinda Kafka, Zookeeper, RabbitMQ ve messaging gateway yer alir.
@@ -16,18 +17,15 @@ echo "${GITHUB_TOKEN}" | docker login ghcr.io -u YOUR_GH_USER --password-stdin
 ```
 2) Imge olustur ve push et:
 ```bash
-IMAGE_OWNER=your-gh-user
-API_TAG=ghcr.io/${IMAGE_OWNER}/mesh-api:latest
-WORKER_TAG=ghcr.io/${IMAGE_OWNER}/mesh-worker:latest
-GATEWAY_TAG=ghcr.io/${IMAGE_OWNER}/messaging-gateway:latest
+docker build -t ghcr.io/YOUR_GH_USER/mesh-api:latest apps/api
+docker build -t ghcr.io/YOUR_GH_USER/mesh-worker:latest apps/worker
+docker build -t ghcr.io/YOUR_GH_USER/catalog-service:latest apps/catalog
+docker build -t ghcr.io/YOUR_GH_USER/messaging-gateway:latest apps/messaging-gateway
 
-docker build -t ${API_TAG} apps/api
-docker build -t ${WORKER_TAG} apps/worker
-docker build -t ${GATEWAY_TAG} apps/messaging-gateway
-
-docker push ${API_TAG}
-docker push ${WORKER_TAG}
-docker push ${GATEWAY_TAG}
+docker push ghcr.io/YOUR_GH_USER/mesh-api:latest
+docker push ghcr.io/YOUR_GH_USER/mesh-worker:latest
+docker push ghcr.io/YOUR_GH_USER/catalog-service:latest
+docker push ghcr.io/YOUR_GH_USER/messaging-gateway:latest
 ```
 
 ## Kubernetes kurulumu
@@ -49,6 +47,11 @@ curl http://localhost:8080/call-worker
 ```bash
 kubectl -n mesh-demo logs -l app.kubernetes.io/name=worker
 ```
+- Catalog servisi:
+```bash
+kubectl -n mesh-demo port-forward svc/catalog 8083:8083
+curl http://localhost:8083/catalog/products
+```
 - Messaging gateway + broker'lar:
 ```bash
 kubectl -n messaging-demo port-forward svc/messaging-gateway 8082:8082
@@ -59,11 +62,11 @@ kubectl -n messaging-demo logs statefulset/rabbitmq
 ```
 
 ## Yer alan Kubernetes objeleri (stack.yaml)
-- `mesh-demo`: API/worker katmani icin Namespace, ConfigMap, Secret, SA+RBAC, NetworkPolicy, PVC, StatefulSet (Postgres), Deployments (api, worker), Services, Ingress, HPA, Job, CronJob, PDB.
+- `mesh-demo`: API/worker katmani icin Namespace, ConfigMap, Secret, SA+RBAC, NetworkPolicy, PVC, StatefulSet (Postgres), Deployments (api, worker, catalog), Services, Gateway + HTTPRoute, HPA, Job, CronJob, PDB.
 - `messaging-demo`: Kafka ve RabbitMQ icin Zookeeper/Kafka/RabbitMQ StatefulSet + Services, ConfigMap, Secret, SA+RBAC, NetworkPolicy, PVC'ler ve messaging-gateway Deployment + Service.
 
 ## GitHub Actions (deploy.yml)
-Workflow; kodu checkout eder, Buildx ile api/worker imajlarini GHCR'a push eder, kubeconfig'i `KUBE_CONFIG_DATA` secret'indan olusturup `k8s/stack.yaml` dosyasini uygular ve Deployment imajlarini gunceller. Gerekli secret'lar:
+Workflow; kodu checkout eder, Buildx ile api/worker/messaging-gateway imajlarini GHCR'a push eder, kubeconfig'i `KUBE_CONFIG_DATA` secret'indan olusturup `k8s/stack.yaml` dosyasini uygular ve Deployment imajlarini gunceller. Gerekli secret:
 - `KUBE_CONFIG_DATA`: base64 olarak encode edilmis kubeconfig.
 - `GHCR_TOKEN` (opsiyonel): GHCR push icin, yoksa otomatik `GITHUB_TOKEN`.
 

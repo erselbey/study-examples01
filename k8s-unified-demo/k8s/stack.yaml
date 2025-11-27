@@ -16,6 +16,7 @@ data:
   WORKER_URL: "http://worker.mesh-demo.svc.cluster.local:8081"
   SERVICE_NAME_API: "api"
   SERVICE_NAME_WORKER: "worker"
+  SERVICE_NAME_CATALOG: "catalog"
   DATABASE_NAME: "mesh_demo"
   DATABASE_USER: "mesh_user"
 ---
@@ -216,6 +217,24 @@ spec:
       targetPort: 8081
   type: ClusterIP
 ---
+apiVersion: v1
+kind: Service
+metadata:
+  name: catalog
+  namespace: mesh-demo
+  labels:
+    app.kubernetes.io/name: catalog
+    app.kubernetes.io/part-of: mesh-demo
+spec:
+  selector:
+    app.kubernetes.io/name: catalog
+    app.kubernetes.io/part-of: mesh-demo
+  ports:
+    - name: http
+      port: 8083
+      targetPort: 8083
+  type: ClusterIP
+---
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -295,6 +314,63 @@ spec:
               port: 8080
             initialDelaySeconds: 10
             periodSeconds: 10
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: catalog
+  namespace: mesh-demo
+  labels:
+    app.kubernetes.io/name: catalog
+    app.kubernetes.io/part-of: mesh-demo
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: catalog
+      app.kubernetes.io/part-of: mesh-demo
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 0
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: catalog
+        app.kubernetes.io/part-of: mesh-demo
+    spec:
+      serviceAccountName: mesh-demo-sa
+      containers:
+        - name: catalog
+          image: ghcr.io/OWNER/catalog-service:latest
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 8083
+          env:
+            - name: ENVIRONMENT
+              valueFrom:
+                configMapKeyRef:
+                  name: mesh-demo-config
+                  key: ENVIRONMENT
+            - name: SERVICE_NAME
+              valueFrom:
+                configMapKeyRef:
+                  name: mesh-demo-config
+                  key: SERVICE_NAME_CATALOG
+          resources:
+            requests:
+              cpu: 50m
+              memory: 64Mi
+            limits:
+              cpu: 250m
+              memory: 256Mi
+          readinessProbe:
+            httpGet:
+              path: /catalog/health
+              port: 8083
+            initialDelaySeconds: 5
+            periodSeconds: 5
 ---
 # --- messaging-demo: Kafka + RabbitMQ + messaging gateway ---
 apiVersion: v1
@@ -805,6 +881,13 @@ spec:
       backendRefs:
         - name: api
           port: 80
+    - matches:
+        - path:
+            type: PathPrefix
+            value: /catalog
+      backendRefs:
+        - name: catalog
+          port: 8083
 ---
 apiVersion: batch/v1
 kind: CronJob
