@@ -40,7 +40,7 @@ builder.Services.AddMassTransit(cfg =>
         {
             bus.Host(rabbitHost, "/", h =>
             {
-                h.Username("Admin");
+                h.Username("");
                 h.Password("guest");
             });
 

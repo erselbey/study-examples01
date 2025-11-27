@@ -9,7 +9,7 @@ using System.Threading.Tasks;
 var builder = WebApplication.CreateBuilder(args);
 var transport = builder.Configuration["TRANSPORT"]?.ToLowerInvariant() ?? "rabbitmq";
 var rabbitHost = builder.Configuration["RABBITMQ_HOST"] ?? "rabbitmq";
-var kafkaHost = builder.Configuration["KAFKA_HOST"] ?? "kafka";
+var kafkaHost = builder.Configuration["KAFKA_HOST"] ?? "172-3-10-24.nip.io";
 var kafkaPort = builder.Configuration["KAFKA_PORT"] ?? "9092";
 
 builder.Services.AddMassTransit(cfg =>
