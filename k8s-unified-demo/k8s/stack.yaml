@@ -1,0 +1,142 @@
+# catalog-demo: yalnizca catalog-service yayinlayan yalın manifest
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: catalog-demo
+  labels:
+    app.kubernetes.io/name: catalog-demo
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: catalog-config
+  namespace: demo
+data:
+  ENVIRONMENT: "production"
+  SERVICE_NAME: "catalog"
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: catalog-sa
+  namespace: demo
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: catalog-allow-namespace
+  namespace: demo
+spec:
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/name: catalog
+  ingress:
+    - from:
+        - podSelector:
+            matchLabels:
+              app.kubernetes.io/name: catalog
+        - namespaceSelector:
+            matchLabels:
+              app.kubernetes.io/name: catalog-demo
+        # Kubelet/health probe'lar node IP'sinden geldiginden hazirlik kontrolleri
+        # NetworkPolicy tarafindan engellenmesin diye tum kaynaklara izin veriyoruz.
+        - ipBlock:
+            cidr: 0.0.0.0/0
+  egress:
+    - {}
+  policyTypes: ["Ingress", "Egress"]
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: catalog
+  namespace: demo
+  labels:
+    app.kubernetes.io/name: catalog
+    app.kubernetes.io/part-of: catalog-demo
+spec:
+  selector:
+    app.kubernetes.io/name: catalog
+    app.kubernetes.io/part-of: catalog-demo
+  ports:
+    - name: http
+      port: 8083
+      targetPort: 8083
+  type: ClusterIP
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: catalog
+  namespace: demo
+  labels:
+    app.kubernetes.io/name: catalog
+    app.kubernetes.io/part-of: catalog-demo
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: catalog
+      app.kubernetes.io/part-of: catalog-demo
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 0
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: catalog
+        app.kubernetes.io/part-of: catalog-demo
+    spec:
+      serviceAccountName: catalog-sa
+      containers:
+        - name: catalog
+          image: docker.io/erselbey/catalog-service:latest
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 8083
+          env:
+            - name: ENVIRONMENT
+              valueFrom:
+                configMapKeyRef:
+                  name: catalog-config
+                  key: ENVIRONMENT
+            - name: SERVICE_NAME
+              valueFrom:
+                configMapKeyRef:
+                  name: catalog-config
+                  key: SERVICE_NAME
+          resources:
+            requests:
+              cpu: 50m
+              memory: 64Mi
+            limits:
+              cpu: 250m
+              memory: 256Mi
+          readinessProbe:
+            httpGet:
+              path: /catalog/health
+              port: 8083
+            initialDelaySeconds: 5
+            periodSeconds: 5
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: catalog-ingress
+  namespace: demo
+  annotations:
+    kubernetes.io/ingress.class: nginx
+spec:
+  rules:
+    - host: catalog-demo.local
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: catalog
+                port:
+                  number: 8083
