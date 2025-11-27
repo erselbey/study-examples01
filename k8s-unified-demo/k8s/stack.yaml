@@ -97,8 +97,6 @@ spec:
         - name: catalog
           image: docker.io/erselbey/catalog-service:latest
           imagePullPolicy: IfNotPresent
-          command: ["dotnet", "Catalog.dll"]
-          args: ["--urls", "http://0.0.0.0:8083"]
           ports:
             - containerPort: 8083
           env:
