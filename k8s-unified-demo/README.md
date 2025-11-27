@@ -8,14 +8,14 @@ Bu paket yalnizca catalog-service'i Kubernetes'e kurup yayinlamak icin sade hale
 - `.github/workflows/deploy.yml`: GHCR'a catalog imaji push edip manifesti uygulayan CI/CD.
 
 ## Docker build ve push
-1) GHCR icin giris yap:
+1) Docker Hub icin giris yap:
 ```bash
-echo "${GITHUB_TOKEN}" | docker login ghcr.io -u YOUR_GH_USER --password-stdin
+echo "${DOCKERHUB_TOKEN}" | docker login -u YOUR_DOCKERHUB_USER --password-stdin
 ```
 2) Imge olustur ve push et:
 ```bash
-docker build -t ghcr.io/YOUR_GH_USER/catalog-service:latest apps/catalog
-docker push ghcr.io/YOUR_GH_USER/catalog-service:latest
+docker build -t docker.io/YOUR_DOCKERHUB_USER/catalog-service:latest apps/catalog
+docker push docker.io/YOUR_DOCKERHUB_USER/catalog-service:latest
 ```
 
 ## Kubernetes kurulumu
@@ -39,9 +39,9 @@ curl http://catalog-demo.local/catalog/products
 - `catalog-demo`: Namespace, ConfigMap, ServiceAccount, NetworkPolicy, Service, Deployment, Ingress.
 
 ## GitHub Actions (deploy.yml)
-Workflow; catalog imajini GHCR'a push eder, kubeconfig'i `KUBE_CONFIG_DATA` secret'inden yazip `k8s/stack.yaml` manifestini uygular, sonra deployment imajini guncelleyip rollout bekler. Gerekli secret:
+Workflow; catalog imajini Docker Hub'a push eder, kubeconfig'i `KUBE_CONFIG_DATA` secret'inden yazip `k8s/stack.yaml` manifestini uygular, sonra deployment imajini guncelleyip rollout bekler. Gerekli secret:
 - `KUBE_CONFIG_DATA`: base64 olarak encode edilmis kubeconfig.
-- `GHCR_TOKEN` (opsiyonel): GHCR push icin, yoksa otomatik `GITHUB_TOKEN`.
+- `DOCKERHUB_USERNAME` ve `DOCKERHUB_TOKEN`: Docker Hub push icin.
 
 ## SSS / notlar
 - `ghcr.io/YOUR_GH_USER/...` yerlerini kendi registry/kullanici adinla degistir.
