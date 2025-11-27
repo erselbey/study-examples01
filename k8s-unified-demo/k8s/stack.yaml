@@ -1,0 +1,481 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: mesh-demo
+  labels:
+    app.kubernetes.io/name: mesh-demo
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: mesh-demo-config
+  namespace: mesh-demo
+data:
+  ENVIRONMENT: "production"
+  WORKER_URL: "http://worker.mesh-demo.svc.cluster.local:8081"
+  SERVICE_NAME_API: "api"
+  SERVICE_NAME_WORKER: "worker"
+  DATABASE_NAME: "mesh_demo"
+  DATABASE_USER: "mesh_user"
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: mesh-demo-secrets
+  namespace: mesh-demo
+type: Opaque
+stringData:
+  DATABASE_PASSWORD: "mesh_password"
+  API_TOKEN: "change-me"
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: mesh-demo-sa
+  namespace: mesh-demo
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: mesh-demo-config-reader
+  namespace: mesh-demo
+rules:
+  - apiGroups: [""]
+    resources: ["configmaps", "secrets"]
+    verbs: ["get", "list", "watch"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: mesh-demo-config-reader-binding
+  namespace: mesh-demo
+subjects:
+  - kind: ServiceAccount
+    name: mesh-demo-sa
+    namespace: mesh-demo
+roleRef:
+  kind: Role
+  name: mesh-demo-config-reader
+  apiGroup: rbac.authorization.k8s.io
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: mesh-demo-allow-namespace
+  namespace: mesh-demo
+spec:
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/part-of: mesh-demo
+  ingress:
+    - from:
+        - podSelector:
+            matchLabels:
+              app.kubernetes.io/part-of: mesh-demo
+        - namespaceSelector:
+            matchLabels:
+              app.kubernetes.io/name: mesh-demo
+  egress:
+    - to:
+        - podSelector:
+            matchLabels:
+              app.kubernetes.io/part-of: mesh-demo
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: kube-system
+      ports:
+        - protocol: UDP
+          port: 53
+    - {}
+  policyTypes: ["Ingress", "Egress"]
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: worker-shared-cache
+  namespace: mesh-demo
+  labels:
+    app.kubernetes.io/part-of: mesh-demo
+spec:
+  accessModes: ["ReadWriteOnce"]
+  resources:
+    requests:
+      storage: 1Gi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: postgres
+  namespace: mesh-demo
+  labels:
+    app.kubernetes.io/name: postgres
+    app.kubernetes.io/part-of: mesh-demo
+spec:
+  ports:
+    - port: 5432
+      name: postgres
+  selector:
+    app.kubernetes.io/name: postgres
+    app.kubernetes.io/part-of: mesh-demo
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: postgres
+  namespace: mesh-demo
+  labels:
+    app.kubernetes.io/name: postgres
+    app.kubernetes.io/part-of: mesh-demo
+spec:
+  serviceName: postgres
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: postgres
+      app.kubernetes.io/part-of: mesh-demo
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: postgres
+        app.kubernetes.io/part-of: mesh-demo
+    spec:
+      serviceAccountName: mesh-demo-sa
+      containers:
+        - name: postgres
+          image: postgres:16-alpine
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 5432
+              name: postgres
+          env:
+            - name: POSTGRES_DB
+              valueFrom:
+                configMapKeyRef:
+                  name: mesh-demo-config
+                  key: DATABASE_NAME
+            - name: POSTGRES_USER
+              valueFrom:
+                configMapKeyRef:
+                  name: mesh-demo-config
+                  key: DATABASE_USER
+            - name: POSTGRES_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: mesh-demo-secrets
+                  key: DATABASE_PASSWORD
+          volumeMounts:
+            - name: postgres-data
+              mountPath: /var/lib/postgresql/data
+              subPath: data
+      terminationGracePeriodSeconds: 30
+  volumeClaimTemplates:
+    - metadata:
+        name: postgres-data
+        labels:
+          app.kubernetes.io/part-of: mesh-demo
+      spec:
+        accessModes: ["ReadWriteOnce"]
+        resources:
+          requests:
+            storage: 5Gi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: api
+  namespace: mesh-demo
+  labels:
+    app.kubernetes.io/name: api
+    app.kubernetes.io/part-of: mesh-demo
+spec:
+  selector:
+    app.kubernetes.io/name: api
+    app.kubernetes.io/part-of: mesh-demo
+  ports:
+    - name: http
+      port: 80
+      targetPort: 8080
+  type: ClusterIP
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: worker
+  namespace: mesh-demo
+  labels:
+    app.kubernetes.io/name: worker
+    app.kubernetes.io/part-of: mesh-demo
+spec:
+  selector:
+    app.kubernetes.io/name: worker
+    app.kubernetes.io/part-of: mesh-demo
+  ports:
+    - name: http
+      port: 8081
+      targetPort: 8081
+  type: ClusterIP
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: api
+  namespace: mesh-demo
+  labels:
+    app.kubernetes.io/name: api
+    app.kubernetes.io/part-of: mesh-demo
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: api
+      app.kubernetes.io/part-of: mesh-demo
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 0
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: api
+        app.kubernetes.io/part-of: mesh-demo
+    spec:
+      serviceAccountName: mesh-demo-sa
+      containers:
+        - name: api
+          image: ghcr.io/OWNER/mesh-api:latest
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 8080
+          env:
+            - name: ENVIRONMENT
+              valueFrom:
+                configMapKeyRef:
+                  name: mesh-demo-config
+                  key: ENVIRONMENT
+            - name: SERVICE_NAME
+              valueFrom:
+                configMapKeyRef:
+                  name: mesh-demo-config
+                  key: SERVICE_NAME_API
+            - name: WORKER_URL
+              valueFrom:
+                configMapKeyRef:
+                  name: mesh-demo-config
+                  key: WORKER_URL
+            - name: DATABASE_HOST
+              value: postgres.mesh-demo.svc.cluster.local
+            - name: DATABASE_USER
+              valueFrom:
+                configMapKeyRef:
+                  name: mesh-demo-config
+                  key: DATABASE_USER
+            - name: DATABASE_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: mesh-demo-secrets
+                  key: DATABASE_PASSWORD
+          resources:
+            requests:
+              cpu: 100m
+              memory: 128Mi
+            limits:
+              cpu: 500m
+              memory: 256Mi
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 8080
+            initialDelaySeconds: 5
+            periodSeconds: 5
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 8080
+            initialDelaySeconds: 10
+            periodSeconds: 10
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: worker
+  namespace: mesh-demo
+  labels:
+    app.kubernetes.io/name: worker
+    app.kubernetes.io/part-of: mesh-demo
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: worker
+      app.kubernetes.io/part-of: mesh-demo
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: worker
+        app.kubernetes.io/part-of: mesh-demo
+    spec:
+      serviceAccountName: mesh-demo-sa
+      volumes:
+        - name: shared-cache
+          persistentVolumeClaim:
+            claimName: worker-shared-cache
+      containers:
+        - name: worker
+          image: ghcr.io/OWNER/mesh-worker:latest
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 8081
+          env:
+            - name: ENVIRONMENT
+              valueFrom:
+                configMapKeyRef:
+                  name: mesh-demo-config
+                  key: ENVIRONMENT
+            - name: SERVICE_NAME
+              valueFrom:
+                configMapKeyRef:
+                  name: mesh-demo-config
+                  key: SERVICE_NAME_WORKER
+            - name: API_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  name: mesh-demo-secrets
+                  key: API_TOKEN
+          resources:
+            requests:
+              cpu: 50m
+              memory: 64Mi
+            limits:
+              cpu: 250m
+              memory: 256Mi
+          volumeMounts:
+            - name: shared-cache
+              mountPath: /var/shared-cache
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 8081
+            initialDelaySeconds: 5
+            periodSeconds: 5
+---
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: api-hpa
+  namespace: mesh-demo
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: api
+  minReplicas: 2
+  maxReplicas: 5
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: 60
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: api
+  namespace: mesh-demo
+  annotations:
+    kubernetes.io/ingress.class: nginx
+spec:
+  rules:
+    - host: mesh-demo.local
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: api
+                port:
+                  number: 80
+---
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: nightly-cleanup
+  namespace: mesh-demo
+spec:
+  schedule: "30 2 * * *"
+  jobTemplate:
+    spec:
+      template:
+        metadata:
+          labels:
+            app.kubernetes.io/name: nightly-cleanup
+            app.kubernetes.io/part-of: mesh-demo
+        spec:
+          serviceAccountName: mesh-demo-sa
+          restartPolicy: OnFailure
+          containers:
+            - name: curl-worker
+              image: curlimages/curl:8.8.0
+              args:
+                - "-X"
+                - "POST"
+                - "http://worker.mesh-demo.svc.cluster.local:8081/tasks"
+                - "-H"
+                - "Content-Type: application/json"
+                - "-d"
+                - '{"job":"cleanup","note":"nightly cron"}'
+---
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: db-seed
+  namespace: mesh-demo
+spec:
+  backoffLimit: 2
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: db-seed
+        app.kubernetes.io/part-of: mesh-demo
+    spec:
+      serviceAccountName: mesh-demo-sa
+      restartPolicy: OnFailure
+      containers:
+        - name: seed
+          image: postgres:16-alpine
+          env:
+            - name: PGPASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: mesh-demo-secrets
+                  key: DATABASE_PASSWORD
+            - name: PGUSER
+              valueFrom:
+                configMapKeyRef:
+                  name: mesh-demo-config
+                  key: DATABASE_USER
+            - name: PGDATABASE
+              valueFrom:
+                configMapKeyRef:
+                  name: mesh-demo-config
+                  key: DATABASE_NAME
+          command:
+            - sh
+            - -c
+            - |
+              psql -h postgres.mesh-demo.svc.cluster.local -U "$PGUSER" -d "$PGDATABASE" -c "SELECT NOW();"
+---
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: api-pdb
+  namespace: mesh-demo
+spec:
+  minAvailable: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: api
+      app.kubernetes.io/part-of: mesh-demo
