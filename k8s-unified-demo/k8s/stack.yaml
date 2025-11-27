@@ -38,6 +38,10 @@ spec:
         - namespaceSelector:
             matchLabels:
               app.kubernetes.io/name: catalog-demo
+        # Kubelet/health probe'lar node IP'sinden geldiginden hazirlik kontrolleri
+        # NetworkPolicy tarafindan engellenmesin diye tum kaynaklara izin veriyoruz.
+        - ipBlock:
+            cidr: 0.0.0.0/0
   egress:
     - {}
   policyTypes: ["Ingress", "Egress"]
