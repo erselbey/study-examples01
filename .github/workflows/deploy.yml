@@ -9,6 +9,7 @@ jobs:
   build-and-deploy:
     # Docker erişimi ve kubectl konteksi k3d-catalog (context ismi varsayılan k3d-k3d-catalog) olan self-hosted runner gereklidir. ##
     runs-on: self-hosted
+    environment: secrets
     permissions:
       contents: read
     env:
