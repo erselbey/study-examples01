@@ -2,7 +2,7 @@ name: Catalog Demo Deploy
 
 on:
   push:
-    branches: development
+    branches: [development]
   workflow_dispatch:
 
 jobs:
