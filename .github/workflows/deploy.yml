@@ -7,7 +7,7 @@ on:
 
 jobs:
   build-and-deploy:
-    # k3d kurulu ve docker erişimi olan self-hosted runner gereklidir. ##
+    # Docker erişimi ve kubectl konteksi k3d-catalog (context ismi varsayılan k3d-k3d-catalog) olan self-hosted runner gereklidir. ##
     runs-on: self-hosted
     permissions:
       contents: read
@@ -18,31 +18,31 @@ jobs:
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
-      - name: Build catalog image (local)
+      - name: Log in to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Build and push catalog image
         uses: docker/build-push-action@v5
         with:
           context: ./k8s-unified-demo/apps/catalog
-          push: false
-          load: true
+          push: true
           tags: |
-            catalog-service:latest
-            catalog-service:${{ github.sha }}
+            docker.io/${{ secrets.DOCKERHUB_USERNAME }}/catalog-service:latest
+            docker.io/${{ secrets.DOCKERHUB_USERNAME }}/catalog-service:${{ github.sha }}
 
-      - name: Import image into k3d
-        run: |
-          k3d image import catalog-service:latest catalog-service:${{ github.sha }} -c ${{ env.K3D_CLUSTER }}
+      - name: Select kube context
+        run: kubectl config use-context ${{ env.KUBE_CONTEXT }}
         env:
-          K3D_CLUSTER: k3d-catalog
-
-      - name: Merge kubeconfig for k3d
-        run: k3d kubeconfig merge ${{ env.K3D_CLUSTER }} --kubeconfig-switch-context
-        env:
-          K3D_CLUSTER: k3d-catalog
+          # k3d <cluster> icin varsayilan context adi k3d-<cluster>. Cluster adi k3d-catalog ise context k3d-k3d-catalog olur.
+          KUBE_CONTEXT: k3d-catalog
 
       - name: Apply manifests
         run: kubectl apply -f k8s-unified-demo/k8s/stack.yaml
 
       - name: Update deployment image
         run: |
-          kubectl -n catalog-demo set image deployment/catalog catalog=catalog-service:${{ github.sha }}
+          kubectl -n catalog-demo set image deployment/catalog catalog=docker.io/${{ secrets.DOCKERHUB_USERNAME }}/catalog-service:${{ github.sha }}
           kubectl -n catalog-demo rollout status deployment/catalog
