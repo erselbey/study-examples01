@@ -95,7 +95,7 @@ spec:
       serviceAccountName: catalog-sa
       containers:
         - name: catalog
-          image: docker.io/erselbey/catalog-service:latest
+          image: docker.io/kursortak1996/catalog-service:latest
           imagePullPolicy: IfNotPresent
           ports:
             - containerPort: 8083
