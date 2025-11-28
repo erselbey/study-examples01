@@ -9,9 +9,10 @@ jobs:
   build-and-deploy:
     # Docker erişimi ve kubectl konteksi k3d-catalog (context ismi varsayılan k3d-k3d-catalog) olan self-hosted runner gereklidir. ##
     runs-on: self-hosted
-    environment: secrets
     permissions:
       contents: read
+    env:
+      KUBE_CONTEXT: k3d-catalog
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -37,9 +38,7 @@ jobs:
 
       - name: Select kube context
         run: kubectl config use-context ${{ env.KUBE_CONTEXT }}
-        env:
-          # k3d <cluster> icin varsayilan context adi k3d-<cluster>. Cluster adi k3d-catalog ise context k3d-k3d-catalog olur.
-          KUBE_CONTEXT: k3d-catalog
+        # KUBE_CONTEXT job env olarak yukarida tanimli; gerekirse override edebilirsin.
 
       - name: Apply manifests
         run: kubectl apply -f k8s-unified-demo/k8s/stack.yaml
