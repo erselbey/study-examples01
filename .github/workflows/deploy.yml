@@ -1,0 +1,49 @@
+name: Catalog Demo Deploy
+
+on:
+  push:
+    branches: [development]
+  workflow_dispatch:
+
+jobs:
+  build-and-deploy:
+    # Docker erişimi ve kubectl konteksi k3d-catalog (context ismi varsayılan k3d-k3d-catalog) olan self-hosted runner gereklidir. ##
+    runs-on: self-hosted
+    permissions:
+      contents: read
+    env:
+      KUBE_CONTEXT: k3d-catalog
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to Docker Hub
+        if: ${{ secrets.DOCKERHUB_USERNAME != '' && secrets.DOCKERHUB_TOKEN != '' }}
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Build and push catalog image
+        uses: docker/build-push-action@v5
+        with:
+          context: ./k8s-unified-demo/apps/catalog
+          push: true
+          tags: |
+            docker.io/${{ secrets.DOCKERHUB_USERNAME }}/catalog-service:latest
+            docker.io/${{ secrets.DOCKERHUB_USERNAME }}/catalog-service:${{ github.sha }}
+
+      - name: Select kube context
+        run: kubectl config use-context ${{ env.KUBE_CONTEXT }}
+        # KUBE_CONTEXT job env olarak yukarida tanimli; gerekirse override edebilirsin.
+
+      - name: Apply manifests
+        run: kubectl apply -f k8s-unified-demo/k8s/stack.yaml
+
+      - name: Update deployment image
+        run: |
+          kubectl -n catalog-demo set image deployment/catalog catalog=docker.io/${{ secrets.DOCKERHUB_USERNAME }}/catalog-service:${{ github.sha }}
+          kubectl -n catalog-demo rollout status deployment/catalog
