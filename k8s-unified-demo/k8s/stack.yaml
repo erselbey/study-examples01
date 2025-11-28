@@ -147,7 +147,7 @@ metadata:
     kubernetes.io/ingress.class: nginx
 spec:
   rules:
-    - host: catalog-demo.local
+    - host: 172-3-10-24.nip.io
       http:
         paths:
           - path: /

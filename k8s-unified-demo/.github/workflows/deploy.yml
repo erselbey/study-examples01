@@ -1,14 +1,14 @@
-name: Mesh Demo Deploy
+name: Catalog Demo Deploy
 
 on:
   push:
-    branches: [main]
+    branches: development
   workflow_dispatch:
 
 jobs:
   build-and-deploy:
     # k3d kurulu ve docker erişimi olan self-hosted runner gereklidir.
-    runs-on: [self-hosted, linux]
+    runs-on: self-hosted
     permissions:
       contents: read
     steps:
