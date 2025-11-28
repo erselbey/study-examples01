@@ -1,0 +1,32 @@
+name: Local Deploy Async Messaging
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    # Bu işin çalışması için Docker erişimine sahip self-hosted runner gereklidir.
+    runs-on: [self-hosted, linux]
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Docker login (opsiyonel)
+        if: ${{ secrets.DOCKERHUB_USERNAME != '' && secrets.DOCKERHUB_TOKEN != '' }}
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Build images
+        run: docker compose -f 52-async-messaging/docker-compose.yml build --pull
+
+      - name: Deploy (docker compose up)
+        run: |
+          docker compose -f 52-async-messaging/docker-compose.yml down --remove-orphans
+          docker compose -f 52-async-messaging/docker-compose.yml up -d
+
+      - name: Show status
+        run: docker compose -f 52-async-messaging/docker-compose.yml ps
